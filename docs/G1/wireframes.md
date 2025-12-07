@@ -5,11 +5,7 @@
 
 ## 1. Ссылка на доску Miro
 
-_Здесь позже вставь свою ссылку, когда сделаешь доску._
-
-Пример:
-
-`https://miro.com/app/board/XXXXXXXXX/`
+https://miro.com/app/board/uXjVGfaq0CQ=/?share_link_id=284145627989
 
 ---
 
