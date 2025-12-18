@@ -1,7 +1,7 @@
 # G2.0 — Детальные макеты (Figma)
 
 ## Ссылка на макеты
-PASTE_FIGMA_LINK_HERE
+(https://www.figma.com/design/8kUmNxSbjQhL8Ko7iUUCF5/StudyTrack-%E2%80%94-G2?node-id=1-2&t=pyHMbH1Ag76BcOKg-1)
 
 ## Экраны
 - Login
