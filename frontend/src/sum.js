@@ -4,3 +4,5 @@ function sum(a, b) {
 }
 
 module.exports = sum;
+// frontend/src/sum.js
+require('./uncovered');
