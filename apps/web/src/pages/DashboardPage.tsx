@@ -16,7 +16,7 @@ export function DashboardPage() {
         <Button component={RouterLink} to="/goal" variant="outlined">
           Моя цель
         </Button>
-        <Button component={RouterLink} to="/stats" variant="outlined">
+        <Button component={RouterLink} to="/statistics" variant="outlined">
           Статистика
         </Button>
       </Stack>

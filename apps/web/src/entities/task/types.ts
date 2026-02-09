@@ -7,5 +7,5 @@ export type Task = {
   done: boolean;
   createdAt: string; // ISO
   day: string; // YYYY-MM-DD
-  goalId?: string;
+  goalId: string | null;
 };
