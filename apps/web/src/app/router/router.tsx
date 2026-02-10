@@ -1,3 +1,5 @@
+/* eslint-disable react-refresh/only-export-components */
+
 import React from "react";
 import { createBrowserRouter, Navigate } from "react-router-dom";
 
@@ -35,10 +37,10 @@ export const router = createBrowserRouter([
       { path: "today", element: <TodayPage /> },
       { path: "goal", element: <GoalPage /> },
 
-      // ✅ основной
+      // основной маршрут статистики
       { path: "stats", element: <StatsPage /> },
 
-      // ✅ алиас, если где-то осталась старая ссылка
+      // алиас, если где-то осталась старая ссылка
       { path: "statistics", element: <Navigate to="/stats" replace /> },
 
       { index: true, element: <Navigate to="/dashboard" replace /> },

@@ -70,7 +70,7 @@ export function StatsPage() {
     }));
   }, [tasks]);
 
-  // ======== B5 minutes stats (старые, оставляем) ========
+  // ======== B5 minutes stats (ТЕПЕРЬ ИСПОЛЬЗУЕМ В UI) ========
   const minuteStats = useMemo(() => {
     const totalPlannedMinutes = tasks.reduce(
       (sum, t) => sum + (t.plannedMinutes ?? 0),
@@ -136,9 +136,7 @@ export function StatsPage() {
     }));
   }, [tasks]);
 
-  // ================================
-  // 🟢 B4 — НОВЫЕ ВЫЧИСЛЕНИЯ (ПЕРЕД return)
-  // ================================
+  // ======== B4 — НОВЫЕ ВЫЧИСЛЕНИЯ ========
   const advancedMetrics = useMemo(() => {
     const totalPlannedMinutes = tasks.reduce(
       (sum, t) => sum + (t.plannedMinutes ?? 0),
@@ -176,7 +174,6 @@ export function StatsPage() {
       bestTask,
     };
   }, [tasks]);
-  // ================================
 
   // ======== CANVAS ========
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -324,6 +321,7 @@ export function StatsPage() {
           <Stack direction="row" spacing={1} alignItems="center">
             <Chip label={`${done}/${total}`} variant="outlined" />
             <Chip label={`${clamp(progress, 0, 100)}%`} />
+            <Chip label={`Активных: ${active}`} variant="outlined" />
             <Chip
               label={`Связано: ${linkedToGoal}`}
               variant={linkedToGoal > 0 ? "filled" : "outlined"}
@@ -344,11 +342,37 @@ export function StatsPage() {
                 />
               </Box>
 
-              {/* ========== 🟢 B4 НОВЫЙ ДАШБОРД (ПЕРЕД CANVAS) ========== */}
+              {/* ======= ИСПОЛЬЗУЕМ minuteStats ======= */}
               <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent>
                   <Typography variant="caption" color="text.secondary">
-                    План vs Факт (мин)
+                    План vs Факт (минуты)
+                  </Typography>
+
+                  <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
+                    {minuteStats.totalDoneMinutes} /{" "}
+                    {minuteStats.totalPlannedMinutes} мин
+                  </Typography>
+
+                  <Typography variant="body2" sx={{ mt: 0.5 }}>
+                    Выполнение по минутам: {minuteStats.percentMinutes}%
+                  </Typography>
+
+                  {minuteStats.bestDay && (
+                    <Typography variant="body2" sx={{ mt: 0.5, fontWeight: 700 }}>
+                      ⭐ Лучший день по задачам:{" "}
+                      {prettyDayLabel(minuteStats.bestDay.day)} —{" "}
+                      {minuteStats.bestDay.done} задач
+                    </Typography>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* ======= B4 ДАШБОРД ======= */}
+              <Card variant="outlined" sx={{ borderRadius: 2 }}>
+                <CardContent>
+                  <Typography variant="caption" color="text.secondary">
+                    Эффективность по времени
                   </Typography>
                   <Typography variant="h5" sx={{ fontWeight: 900, mt: 0.5 }}>
                     {advancedMetrics.totalActualMinutes} /{" "}
@@ -372,9 +396,8 @@ export function StatsPage() {
                   )}
                 </CardContent>
               </Card>
-              {/* ============================================== */}
 
-              {/* Canvas */}
+              {/* ======= CANVAS ======= */}
               <Card variant="outlined" sx={{ borderRadius: 2 }}>
                 <CardContent>
                   <Typography variant="h6" sx={{ fontWeight: 800, mb: 1 }}>

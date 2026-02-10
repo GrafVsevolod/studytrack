@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, useEffect } from "react";   // ✅ ШАГ 1
+import { useMemo, useRef, useState, useEffect } from "react";
 import {
   Box,
   Button,
@@ -38,8 +38,6 @@ import {
 } from "../app/store/slices/tasksSlice";
 import type { Task } from "../entities/task/types";
 
-type Filter = "all" | "active" | "done";
-
 function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
@@ -53,14 +51,11 @@ export function TodayPage() {
   const goalId = goal?.id ?? "main";
 
   const [text, setText] = useState("");
-  const [filter, setFilter] = useState<Filter>("all");
 
   const inputRef = useRef<HTMLInputElement | null>(null);
 
-  // =======================
-  // ✅ ШАГ 2 — СЧЁТЧИК ВРЕМЕНИ
-  // =======================
-  const [now, setNow] = useState(Date.now());
+  // ✅ FIX: Date.now purity — ленивый инициализатор
+  const [now, setNow] = useState(() => Date.now());
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -69,23 +64,14 @@ export function TodayPage() {
 
     return () => clearInterval(interval);
   }, []);
-  // =======================
 
   const doneCount = useMemo(() => tasks.filter((t) => t.done).length, [tasks]);
   const totalCount = tasks.length;
   const progress =
     totalCount === 0 ? 0 : Math.round((doneCount / totalCount) * 100);
 
-  const visibleTasks = useMemo(() => {
-    switch (filter) {
-      case "active":
-        return tasks.filter((t) => !t.done);
-      case "done":
-        return tasks.filter((t) => t.done);
-      default:
-        return tasks;
-    }
-  }, [tasks, filter]);
+  // ✅ FIX: убрали фильтрацию/unused setFilter — просто показываем все задачи
+  const visibleTasks = tasks;
 
   const canAdd = text.trim().length > 0;
 
@@ -125,7 +111,12 @@ export function TodayPage() {
             </Typography>
           </Box>
 
-          <Stack direction="row" spacing={1} alignItems="center" justifyContent="flex-end">
+          <Stack
+            direction="row"
+            spacing={1}
+            alignItems="center"
+            justifyContent="flex-end"
+          >
             <Chip
               label={`${doneCount}/${totalCount}`}
               variant="outlined"
@@ -143,7 +134,10 @@ export function TodayPage() {
             <Stack spacing={2}>
               {/* Progress bar */}
               <Box>
-                <LinearProgress variant="determinate" value={clamp(progress, 0, 100)} />
+                <LinearProgress
+                  variant="determinate"
+                  value={clamp(progress, 0, 100)}
+                />
                 <Stack direction="row" justifyContent="space-between" sx={{ mt: 1 }}>
                   <Typography variant="caption" color="text.secondary">
                     Прогресс дня
@@ -198,7 +192,10 @@ export function TodayPage() {
                   <List disablePadding>
                     {visibleTasks.map((task, idx) => {
                       const isLast = idx === visibleTasks.length - 1;
-                      const minutes = Math.max(0, Math.round(task.plannedMinutes ?? 0));
+                      const minutes = Math.max(
+                        0,
+                        Math.round(task.plannedMinutes ?? 0)
+                      );
                       const isLong = minutes >= 60;
                       const isRunning = !!task.timerStartedAt;
 
@@ -211,9 +208,7 @@ export function TodayPage() {
                               gap: 1,
                               opacity: task.done ? 0.7 : 1,
                               alignItems: "flex-start",
-                              ...(isLong
-                                ? { bgcolor: "rgba(255, 152, 0, 0.06)" }
-                                : {}),
+                              ...(isLong ? { bgcolor: "rgba(255, 152, 0, 0.06)" } : {}),
                             }}
                             secondaryAction={
                               <Tooltip title="Удалить">
@@ -304,9 +299,7 @@ export function TodayPage() {
                                 />
                               </Stack>
 
-                              {/* ========================= */}
-                              {/* ✅ ШАГ 3 — ДИНАМИЧЕСКИЙ ФАКТ/ПЛАН */}
-                              {/* ========================= */}
+                              {/* Факт/План (динамический) */}
                               <Typography
                                 variant="caption"
                                 color="text.secondary"
@@ -328,7 +321,6 @@ export function TodayPage() {
                                   return `Факт: ${mm} мин / План: ${minutes} мин`;
                                 })()}
                               </Typography>
-                              {/* ========================= */}
 
                               <Box sx={{ mt: 1.25 }}>
                                 <Stack
@@ -352,7 +344,11 @@ export function TodayPage() {
                                     />
                                   </Box>
 
-                                  <Stack direction="row" spacing={1} justifyContent="flex-end">
+                                  <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    justifyContent="flex-end"
+                                  >
                                     {[15, 25, 50, 90].map((m) => (
                                       <Button
                                         key={m}
