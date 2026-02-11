@@ -1,4 +1,4 @@
-kname: quality
+name: quality
 
 on:
   push:
@@ -8,6 +8,11 @@ on:
 jobs:
   quality:
     runs-on: ubuntu-latest
+
+    env:
+      VITE_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+      VITE_APP_ENV: ci
+      CI: "true"
 
     steps:
       - name: Checkout
