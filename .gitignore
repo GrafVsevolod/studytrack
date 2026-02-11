@@ -1,0 +1,30 @@
+# deps
+node_modules/
+
+# builds
+dist/
+build/
+.vite/
+*.tsbuildinfo
+
+# test artifacts
+coverage/
+playwright-report/
+test-results/
+
+# env
+.env
+.env.*
+
+# db / local data
+*.sqlite
+*.db
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS
+.DS_Store
