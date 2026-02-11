@@ -7,26 +7,31 @@ import App from "./App";
 import "./index.css";
 
 const dsn = import.meta.env.VITE_SENTRY_DSN as string | undefined;
-const appEnv =
-  (import.meta.env.VITE_APP_ENV as string | undefined) ?? "local";
+const appEnv = (import.meta.env.VITE_APP_ENV as string | undefined) ?? "local";
 
-// Не включаем Sentry в тестах и Playwright
-const isTestLike =
-  import.meta.env.MODE === "test" ||
-  (import.meta.env.MODE as string) === "vitest" ||
-  (typeof navigator !== "undefined" &&
-    /Playwright/i.test(navigator.userAgent || ""));
+// 1) Никогда не включаем Sentry в unit-тестах
+const isVitest = import.meta.env.MODE === "test";
 
-if (dsn && !isTestLike) {
+// 2) В e2e тоже лучше выключать (чтобы не мешал и не слал лишнего)
+const isPlaywright =
+  typeof navigator !== "undefined" &&
+  /Playwright/i.test(navigator.userAgent || "");
+
+// 3) Включаем только если есть DSN и мы не в тестовой среде
+if (dsn && !isVitest && !isPlaywright) {
   Sentry.init({
     dsn,
     environment: appEnv,
-    enabled: import.meta.env.PROD, // включаем только в проде
+
+    // В проде всегда включено.
+    // В dev — по умолчанию выключено, но можно включить флагом VITE_SENTRY_ENABLED=1
+    enabled:
+      import.meta.env.PROD ||
+      (import.meta.env.VITE_SENTRY_ENABLED as string | undefined) === "1",
+
     tracesSampleRate: 0.1,
   });
 }
-
-// -------- RENDER --------
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
