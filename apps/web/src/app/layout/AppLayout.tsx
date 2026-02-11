@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import {
   AppBar,
@@ -11,7 +12,7 @@ import {
 } from "@mui/material";
 
 import { useAppDispatch } from "../store/hooks";
-import { resetAll } from "../store/slices/authSlice";
+import { fetchMe, resetAll } from "../store/slices/authSlice";
 
 const tabs = [
   { label: "Dashboard", path: "/dashboard" },
@@ -26,6 +27,11 @@ export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
+
+  // ✅ при старте приложения (если есть token в localStorage) дергаем /auth/me
+  useEffect(() => {
+    dispatch(fetchMe());
+  }, [dispatch]);
 
   const currentTab = tabs.findIndex((t) => location.pathname.startsWith(t.path));
   const value = currentTab === -1 ? false : currentTab;

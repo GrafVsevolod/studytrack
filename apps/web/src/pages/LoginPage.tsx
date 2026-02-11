@@ -14,7 +14,6 @@ import { useAppDispatch, useAppSelector } from "../app/store/hooks";
 import {
   clearAuthError,
   loginUser,
-  persistSession,
 } from "../app/store/slices/authSlice";
 import { clearAllTasks } from "../app/store/slices/tasksSlice";
 import { resetGoal } from "../app/store/slices/goalSlice";
@@ -36,12 +35,12 @@ export function LoginPage() {
     dispatch(clearAuthError());
   }, [dispatch]);
 
-  // ✅ если логин прошёл — сохраняем session в LS и редиректим
+  // ✅ После успешного логина — редирект
   useEffect(() => {
-    if (!auth.isAuthenticated) return;
-    dispatch(persistSession());
-    navigate("/today", { replace: true });
-  }, [auth.isAuthenticated, dispatch, navigate]);
+    if (auth.isAuthenticated) {
+      navigate("/today", { replace: true });
+    }
+  }, [auth.isAuthenticated, navigate]);
 
   const emailTrimmed = email.trim();
   const emailValid = EMAIL_RE.test(emailTrimmed);
@@ -59,7 +58,7 @@ export function LoginPage() {
     dispatch(resetGoal());
 
     dispatch(loginUser({ email: emailTrimmed, password }));
-    // ❗️navigate тут НЕ делаем — дождёмся auth.isAuthenticated в useEffect выше
+    // ❗️ navigate НЕ делаем здесь — ждём auth.isAuthenticated в useEffect
   };
 
   return (
@@ -89,7 +88,9 @@ export function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               error={touched && !emailValid}
               helperText={
-                touched && !emailValid ? "Введите email в формате name@mail.com" : " "
+                touched && !emailValid
+                  ? "Введите email в формате name@mail.com"
+                  : " "
               }
               onKeyDown={(e) => {
                 if (e.key === "Enter") handleLogin();

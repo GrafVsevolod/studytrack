@@ -16,7 +16,12 @@ let skipNextPersist = false;
 
 // ✅ middleware: при resetAll чистим persisted state + localStorage session keys
 const resetAllMiddleware: Middleware = () => (next) => (action) => {
-  if (action?.type === resetAll.type) {
+  const type =
+    typeof action === "object" && action !== null && "type" in action
+      ? (action as { type: string }).type
+      : null;
+
+  if (type === resetAll.type) {
     try {
       // чистим persisted redux state
       localStorage.removeItem(PERSIST_KEY);

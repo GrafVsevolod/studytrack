@@ -14,7 +14,6 @@ import { useAppDispatch, useAppSelector } from "../app/store/hooks";
 import {
   clearAuthError,
   registerUser,
-  persistSession,
 } from "../app/store/slices/authSlice";
 import { clearAllTasks } from "../app/store/slices/tasksSlice";
 import { resetGoal } from "../app/store/slices/goalSlice";
@@ -37,12 +36,12 @@ export function RegisterPage() {
     dispatch(clearAuthError());
   }, [dispatch]);
 
-  // ✅ если регистрация прошла — сохраняем session в LS и редиректим
+  // ✅ После успешной регистрации — редирект
   useEffect(() => {
-    if (!auth.isAuthenticated) return;
-    dispatch(persistSession());
-    navigate("/today", { replace: true });
-  }, [auth.isAuthenticated, dispatch, navigate]);
+    if (auth.isAuthenticated) {
+      navigate("/today", { replace: true });
+    }
+  }, [auth.isAuthenticated, navigate]);
 
   const emailTrimmed = email.trim();
   const nameTrimmed = name.trim();
@@ -69,7 +68,7 @@ export function RegisterPage() {
         displayName: nameTrimmed,
       })
     );
-    // ❗️navigate тут НЕ делаем — дождёмся auth.isAuthenticated в useEffect выше
+    // ❗️ navigate НЕ делаем здесь — ждём auth.isAuthenticated в useEffect
   };
 
   return (
@@ -107,7 +106,9 @@ export function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={touched && !emailValid}
-              helperText={touched && !emailValid ? "Введите корректный email" : " "}
+              helperText={
+                touched && !emailValid ? "Введите корректный email" : " "
+              }
             />
 
             <TextField
@@ -117,7 +118,9 @@ export function RegisterPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               error={touched && !passwordValid}
-              helperText={touched && !passwordValid ? "Минимум 6 символов" : " "}
+              helperText={
+                touched && !passwordValid ? "Минимум 6 символов" : " "
+              }
             />
 
             <Button

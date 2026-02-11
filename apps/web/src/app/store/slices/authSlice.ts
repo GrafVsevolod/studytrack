@@ -1,25 +1,16 @@
-import { createSlice } from "@reduxjs/toolkit";
-import type { PayloadAction } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-type User = {
-  email: string;
-  displayName: string;
-  password: string; // ⚠️ учебный проект
-  registeredAt: string;
-};
+const API = "http://localhost:4000";
+
+const LS_TOKEN_KEY = "studytrack_token";
 
 type AuthState = {
-  // session
   isAuthenticated: boolean;
   email: string | null;
   displayName: string | null;
   token: string | null;
   registeredAt: string | null;
-
-  // users db (local)
-  users: Record<string, User>;
-
-  // ui
+  loading: boolean;
   error: string | null;
 };
 
@@ -27,25 +18,100 @@ const initialState: AuthState = {
   isAuthenticated: false,
   email: null,
   displayName: null,
-  token: null,
+  token: localStorage.getItem(LS_TOKEN_KEY),
   registeredAt: null,
-
-  users: {},
-
+  loading: false,
   error: null,
 };
 
-function normEmail(email: string) {
-  return email.trim().toLowerCase();
-}
+/**
+ * ============= THUNKS (реальные запросы на сервер) =============
+ */
 
-function makeToken() {
-  return "fake_jwt_" + Date.now();
-}
+export const registerUser = createAsyncThunk(
+  "auth/register",
+  async (
+    body: { email: string; password: string; displayName: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await fetch(`${API}/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
-// единые ключи, чтобы не путаться
-const LS_TOKEN_KEY = "studytrack_token";
-const LS_EMAIL_KEY = "studytrack_email";
+      const data = await res.json();
+
+      if (!res.ok) {
+        return rejectWithValue(data.error || "Ошибка регистрации");
+      }
+
+      return data; // { token, user }
+    } catch {
+      return rejectWithValue("Не удалось подключиться к серверу");
+    }
+  }
+);
+
+export const loginUser = createAsyncThunk(
+  "auth/login",
+  async (
+    body: { email: string; password: string },
+    { rejectWithValue }
+  ) => {
+    try {
+      const res = await fetch(`${API}/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return rejectWithValue(data.error || "Ошибка входа");
+      }
+
+      return data; // { token, user }
+    } catch {
+      return rejectWithValue("Не удалось подключиться к серверу");
+    }
+  }
+);
+
+// загрузка текущего пользователя по токену
+export const fetchMe = createAsyncThunk(
+  "auth/me",
+  async (_, { getState, rejectWithValue }) => {
+    const state = getState() as { auth: AuthState };
+    const token = state.auth.token;
+
+    if (!token) return rejectWithValue("Нет токена");
+
+    try {
+      const res = await fetch(`${API}/auth/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        return rejectWithValue(data.error || "Невалидный токен");
+      }
+
+      return data; // { user }
+    } catch {
+      return rejectWithValue("Не удалось подключиться к серверу");
+    }
+  }
+);
+
+/**
+ * ============= SLICE =============
+ */
 
 const authSlice = createSlice({
   name: "auth",
@@ -55,80 +121,6 @@ const authSlice = createSlice({
       state.error = null;
     },
 
-    // ✅ Register: сохраняем юзера + авто-логин
-    registerUser(
-      state,
-      action: PayloadAction<{ email: string; password: string; displayName: string }>
-    ) {
-      const email = normEmail(action.payload.email);
-      const password = action.payload.password;
-      const displayName = action.payload.displayName.trim();
-
-      if (!email) {
-        state.error = "Email обязателен";
-        return;
-      }
-      if (displayName.length < 2) {
-        state.error = "Имя должно быть минимум 2 символа";
-        return;
-      }
-      if (password.length < 6) {
-        state.error = "Пароль должен быть минимум 6 символов";
-        return;
-      }
-      if (state.users[email]) {
-        state.error = "Пользователь с таким email уже существует";
-        return;
-      }
-
-      const registeredAt = new Date().toISOString();
-      state.users[email] = { email, displayName, password, registeredAt };
-
-      // session
-      state.isAuthenticated = true;
-      state.email = email;
-      state.displayName = displayName;
-      state.registeredAt = registeredAt;
-      state.token = makeToken();
-      state.error = null;
-    },
-
-    // ✅ Login: проверяем по users
-    loginUser(state, action: PayloadAction<{ email: string; password: string }>) {
-      const email = normEmail(action.payload.email);
-      const password = action.payload.password;
-
-      const u = state.users[email];
-      if (!u) {
-        state.error = "Такого пользователя нет. Сначала зарегистрируйся.";
-        return;
-      }
-      if (u.password !== password) {
-        state.error = "Неверный пароль";
-        return;
-      }
-
-      state.isAuthenticated = true;
-      state.email = u.email;
-      state.displayName = u.displayName;
-      state.registeredAt = u.registeredAt;
-      state.token = makeToken();
-      state.error = null;
-    },
-
-    // ✅ кладём в localStorage РОВНО то, что лежит в state (без рассинхрона)
-    persistSession(state) {
-      if (!state.token || !state.email) return;
-      localStorage.setItem(LS_TOKEN_KEY, state.token);
-      localStorage.setItem(LS_EMAIL_KEY, state.email);
-    },
-
-    clearSessionStorage() {
-      localStorage.removeItem(LS_TOKEN_KEY);
-      localStorage.removeItem(LS_EMAIL_KEY);
-    },
-
-    // ✅ logout = сброс ТОЛЬКО сессии (users остаются!)
     logout(state) {
       state.isAuthenticated = false;
       state.email = null;
@@ -136,27 +128,73 @@ const authSlice = createSlice({
       state.token = null;
       state.registeredAt = null;
       state.error = null;
+      localStorage.removeItem(LS_TOKEN_KEY);
     },
 
-    // ✅ “глобальный сброс” (например, на Logout) — но НЕ удаляем users
-    resetAll(state) {
-      const users = state.users;
-      return {
-        ...initialState,
-        users,
-      };
+    resetAll() {
+      localStorage.removeItem(LS_TOKEN_KEY);
+      return initialState;
     },
+  },
+
+  extraReducers: (builder) => {
+    builder
+      // ===== REGISTER =====
+      .addCase(registerUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(registerUser.fulfilled, (state, action) => {
+        const { token, user } = action.payload;
+
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.token = token;
+        state.email = user.email;
+        state.displayName = user.displayName;
+        state.registeredAt = user.registeredAt;
+        state.error = null;
+
+        localStorage.setItem(LS_TOKEN_KEY, token);
+      })
+      .addCase(registerUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // ===== LOGIN =====
+      .addCase(loginUser.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(loginUser.fulfilled, (state, action) => {
+        const { token, user } = action.payload;
+
+        state.loading = false;
+        state.isAuthenticated = true;
+        state.token = token;
+        state.email = user.email;
+        state.displayName = user.displayName;
+        state.registeredAt = user.registeredAt;
+        state.error = null;
+
+        localStorage.setItem(LS_TOKEN_KEY, token);
+      })
+      .addCase(loginUser.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload as string;
+      })
+
+      // ===== ME =====
+      .addCase(fetchMe.fulfilled, (state, action) => {
+        const { user } = action.payload;
+        state.isAuthenticated = true;
+        state.email = user.email;
+        state.displayName = user.displayName;
+        state.registeredAt = user.registeredAt;
+      });
   },
 });
 
-export const {
-  registerUser,
-  loginUser,
-  logout,
-  resetAll,
-  clearAuthError,
-  persistSession,
-  clearSessionStorage,
-} = authSlice.actions;
-
+export const { logout, resetAll, clearAuthError } = authSlice.actions;
 export const authReducer = authSlice.reducer;
