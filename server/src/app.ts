@@ -8,36 +8,50 @@ dotenv.config();
 const app = express();
 
 /**
- * Разрешаем оба варианта локального фронта:
- * - http://localhost:5173
- * - http://127.0.0.1:5173
- *
- * А также возможность переопределить через .env
+ * Разрешённые origin:
+ * - локальная разработка
+ * - прод Netlify
+ * - deploy previews Netlify
+ * - через env (FRONTEND_URL / FRONTEND_URLS)
  */
-const allowedOrigins = [
+
+const devOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
+  "https://warm-taffy-944014.netlify.app", // твой прод Netlify
 ];
 
-if (process.env.CORS_ORIGIN) {
-  allowedOrigins.push(process.env.CORS_ORIGIN);
-}
+const envOrigins = [
+  process.env.FRONTEND_URL,
+  ...(process.env.FRONTEND_URLS?.split(",") ?? []),
+]
+  .map((s) => s?.trim())
+  .filter(Boolean) as string[];
 
-app.use(
-  cors({
-    origin: (origin, callback) => {
-      // Разрешаем запросы без origin (например curl / Postman)
-      if (!origin) return callback(null, true);
+const allowedOrigins = new Set([...devOrigins, ...envOrigins]);
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
+// Разрешаем deploy preview вида:
+// https://<hash>--warm-taffy-944014.netlify.app
+const isNetlifyPreviewForThisSite = (origin: string) =>
+  origin.endsWith(".netlify.app") &&
+  origin.includes("--warm-taffy-944014");
 
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+
+    if (allowedOrigins.has(origin)) return cb(null, true);
+    if (isNetlifyPreviewForThisSite(origin)) return cb(null, true);
+
+    // ❗️НЕ кидаем Error — иначе будет 500 на preflight
+    return cb(null, false);
+  },
+  credentials: true,
+};
+
+// 🔥 КРИТИЧНО: CORS ДО ВСЕХ РОУТОВ
+app.options(/.*/, cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.use(express.json());
 
