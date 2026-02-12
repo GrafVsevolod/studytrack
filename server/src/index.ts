@@ -50,7 +50,9 @@ const corsOptions: cors.CorsOptions = {
 };
 
 // ✅ чтобы OPTIONS (preflight) всегда обрабатывался корректно
-app.options("*", cors(corsOptions));
+// ❗️Вместо "*" используем RegExp, иначе в проде падает path-to-regexp
+app.options(/.*/, cors(corsOptions));
+
 app.use(cors(corsOptions));
 
 app.listen(port, () => {
