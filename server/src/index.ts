@@ -19,7 +19,7 @@ const devOrigins = [
   "http://127.0.0.1:5173",
   "http://localhost:5173",
 
-  // 👇 ДОБАВЛЕНО
+  // 👇 PROD домен Netlify
   "https://warm-taffy-944014.netlify.app",
 ];
 
@@ -32,18 +32,26 @@ const envOrigins = [
 
 const allowedOrigins = new Set([...devOrigins, ...envOrigins]);
 
-app.use(
-  cors({
-    origin: (origin, cb) => {
-      if (!origin) return cb(null, true);
+// ✅ разрешаем deploy-preview вида: https://<hash>--warm-taffy-944014.netlify.app
+const isNetlifyPreviewForThisSite = (origin: string) =>
+  origin.endsWith(".netlify.app") && origin.includes("--warm-taffy-944014");
 
-      if (allowedOrigins.has(origin)) return cb(null, true);
+const corsOptions: cors.CorsOptions = {
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
 
-      return cb(new Error(`CORS blocked origin: ${origin}`), false);
-    },
-    credentials: true,
-  })
-);
+    if (allowedOrigins.has(origin)) return cb(null, true);
+    if (isNetlifyPreviewForThisSite(origin)) return cb(null, true);
+
+    // ❗️ВАЖНО: не кидаем Error => иначе preflight станет 500
+    return cb(null, false);
+  },
+  credentials: true,
+};
+
+// ✅ чтобы OPTIONS (preflight) всегда обрабатывался корректно
+app.options("*", cors(corsOptions));
+app.use(cors(corsOptions));
 
 app.listen(port, () => {
   console.log(`[server] listening on port ${port}`);
