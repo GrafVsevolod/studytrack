@@ -1,5 +1,4 @@
 import { configureStore } from "@reduxjs/toolkit";
-import type { Middleware } from "@reduxjs/toolkit";
 
 import { authReducer } from "./slices/authSlice";
 import { tasksReducer } from "./slices/tasksSlice";
@@ -7,59 +6,41 @@ import { goalReducer } from "./slices/goalSlice";
 import { uiReducer } from "./slices/uiSlice";
 
 import { loadState, saveState } from "../../shared/lib/storage";
-import { resetAll } from "./slices/authSlice";
 
 const PERSIST_KEY = "studytrack_state_v1";
 
-// ✅ чтобы после resetAll мы не записали обратно "пустой" стейт тем же ключом
-let skipNextPersist = false;
+/**
+ * Персистим ТОЛЬКО tasks и goal.
+ * Auth НЕ персистим — токен живёт отдельно в localStorage (studytrack_token).
+ */
 
-// ✅ middleware: при resetAll чистим persisted state + localStorage session keys
-const resetAllMiddleware: Middleware = () => (next) => (action) => {
-  const type =
-    typeof action === "object" && action !== null && "type" in action
-      ? (action as { type: string }).type
-      : null;
-
-  if (type === resetAll.type) {
-    try {
-      // чистим persisted redux state
-      localStorage.removeItem(PERSIST_KEY);
-
-      // чистим session keys (логин/токен), чтобы роут-гард не считал что ты залогинен
-      localStorage.removeItem("studytrack_token");
-      localStorage.removeItem("studytrack_email");
-    } catch {
-      // ignore
-    }
-    skipNextPersist = true;
-  }
-
-  return next(action);
+type PersistedState = {
+  tasks?: ReturnType<typeof tasksReducer>;
+  goal?: ReturnType<typeof goalReducer>;
 };
+
+const preloaded = (loadState(PERSIST_KEY) as PersistedState | undefined) ?? {};
 
 export const store = configureStore({
   reducer: {
-    auth: authReducer,
+    auth: authReducer, // auth НЕ персистим
     tasks: tasksReducer,
     goal: goalReducer,
     ui: uiReducer,
   },
-  preloadedState: loadState(PERSIST_KEY),
+  preloadedState: {
+    tasks: preloaded.tasks,
+    goal: preloaded.goal,
+  },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // ✅ localStorage/Date/и т.п. — чтобы не ловить лишние варнинги
-    }).concat(resetAllMiddleware),
+      serializableCheck: false,
+    }),
 });
 
+// сохраняем только то, что должно жить между logout/login
 store.subscribe(() => {
-  if (skipNextPersist) {
-    skipNextPersist = false;
-    return;
-  }
-
   saveState(PERSIST_KEY, {
-    auth: store.getState().auth,
     tasks: store.getState().tasks,
     goal: store.getState().goal,
   });

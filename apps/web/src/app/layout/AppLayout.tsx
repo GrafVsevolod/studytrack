@@ -11,8 +11,8 @@ import {
   Typography,
 } from "@mui/material";
 
-import { useAppDispatch } from "../store/hooks";
-import { fetchMe, resetAll } from "../store/slices/authSlice";
+import { useAppDispatch, useAppSelector } from "../store/hooks";
+import { fetchMe, logout } from "../store/slices/authSlice";
 
 const tabs = [
   { label: "Dashboard", path: "/dashboard" },
@@ -21,30 +21,27 @@ const tabs = [
   { label: "Statistics", path: "/statistics" },
 ];
 
-const PERSIST_KEY = "studytrack_state_v1";
-
 export function AppLayout() {
   const location = useLocation();
   const navigate = useNavigate();
   const dispatch = useAppDispatch();
 
-  // ✅ при старте приложения (если есть token в localStorage) дергаем /auth/me
+  const token = useAppSelector((s) => s.auth.token);
+
+  // ✅ Дергаем /auth/me только если есть token
   useEffect(() => {
-    dispatch(fetchMe());
-  }, [dispatch]);
+    if (token) {
+      dispatch(fetchMe());
+    }
+  }, [dispatch, token]);
 
   const currentTab = tabs.findIndex((t) => location.pathname.startsWith(t.path));
   const value = currentTab === -1 ? false : currentTab;
 
   const handleLogout = () => {
-    // ✅ чистим persisted + локальные ключи
-    localStorage.removeItem(PERSIST_KEY);
-    localStorage.removeItem("studytrack_token");
-    localStorage.removeItem("studytrack_email");
-
-    // ✅ сброс auth (и триггер для общего сброса, если ты это заведёшь в store)
-    dispatch(resetAll());
-
+    // ✅ logout должен чистить только auth (токен/почта),
+    // persisted state (tasks/goal) НЕ трогаем
+    dispatch(logout());
     navigate("/login", { replace: true });
   };
 

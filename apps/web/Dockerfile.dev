@@ -1,0 +1,18 @@
+FROM node:20-alpine
+
+WORKDIR /app
+
+# Нужно для некоторых бинарников/зависимостей на Alpine
+RUN apk add --no-cache libc6-compat
+
+# зависимости отдельно — чтобы кешировалось
+COPY package*.json ./
+RUN npm ci
+
+# исходники
+COPY . .
+
+EXPOSE 5173
+
+# Vite dev server
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

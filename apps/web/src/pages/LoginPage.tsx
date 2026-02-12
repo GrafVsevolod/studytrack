@@ -11,11 +11,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/store/hooks";
-import {
-  clearAuthError,
-  loginUser,
-} from "../app/store/slices/authSlice";
-import { clearAllTasks } from "../app/store/slices/tasksSlice";
+import { clearAuthError, loginUser } from "../app/store/slices/authSlice";
 import { resetGoal } from "../app/store/slices/goalSlice";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -53,8 +49,7 @@ export function LoginPage() {
     dispatch(clearAuthError());
     if (!canSubmit) return;
 
-    // ✅ логин под другого пользователя → чистим рабочие данные
-    dispatch(clearAllTasks());
+    // ✅ если хочешь — цель можно сбрасывать, но задачи НЕ трогаем
     dispatch(resetGoal());
 
     dispatch(loginUser({ email: emailTrimmed, password }));

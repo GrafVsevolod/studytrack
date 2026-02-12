@@ -1,0 +1,20 @@
+FROM node:20-bookworm-slim
+
+WORKDIR /app
+
+# Нужны для сборки native-модулей (better-sqlite3)
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends python3 make g++ && \
+    rm -rf /var/lib/apt/lists/*
+
+# Сначала только зависимости — чтобы работал кеш Docker
+COPY package*.json ./
+RUN npm ci
+
+# Копируем только то, что реально нужно
+COPY tsconfig.json ./
+COPY src ./src
+
+EXPOSE 4000
+
+CMD ["npm", "run", "dev"]

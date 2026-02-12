@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
-const API = "http://localhost:4000";
+const API = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
 const LS_TOKEN_KEY = "studytrack_token";
 
@@ -56,10 +56,7 @@ export const registerUser = createAsyncThunk(
 
 export const loginUser = createAsyncThunk(
   "auth/login",
-  async (
-    body: { email: string; password: string },
-    { rejectWithValue }
-  ) => {
+  async (body: { email: string; password: string }, { rejectWithValue }) => {
     try {
       const res = await fetch(`${API}/auth/login`, {
         method: "POST",
@@ -122,6 +119,7 @@ const authSlice = createSlice({
     },
 
     logout(state) {
+      // ✅ logout чистит только auth/session (НЕ трогаем persisted store целиком)
       state.isAuthenticated = false;
       state.email = null;
       state.displayName = null;
@@ -132,8 +130,12 @@ const authSlice = createSlice({
     },
 
     resetAll() {
+      // ✅ resetAll — только для “полного сброса приложения”, если реально нужно
       localStorage.removeItem(LS_TOKEN_KEY);
-      return initialState;
+      return {
+        ...initialState,
+        token: null,
+      };
     },
   },
 
@@ -145,7 +147,14 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(registerUser.fulfilled, (state, action) => {
-        const { token, user } = action.payload;
+        const { token, user } = action.payload as {
+          token: string;
+          user: {
+            email: string;
+            displayName: string;
+            registeredAt: string | null;
+          };
+        };
 
         state.loading = false;
         state.isAuthenticated = true;
@@ -168,7 +177,14 @@ const authSlice = createSlice({
         state.error = null;
       })
       .addCase(loginUser.fulfilled, (state, action) => {
-        const { token, user } = action.payload;
+        const { token, user } = action.payload as {
+          token: string;
+          user: {
+            email: string;
+            displayName: string;
+            registeredAt: string | null;
+          };
+        };
 
         state.loading = false;
         state.isAuthenticated = true;
@@ -186,12 +202,33 @@ const authSlice = createSlice({
       })
 
       // ===== ME =====
+      .addCase(fetchMe.pending, (state) => {
+        // ✅ чтобы UI не “мигал” ошибкой при старте
+        state.loading = true;
+        state.error = null;
+      })
       .addCase(fetchMe.fulfilled, (state, action) => {
-        const { user } = action.payload;
+        const { user } = action.payload as {
+          user: { email: string; displayName: string; registeredAt: string | null };
+        };
+
+        state.loading = false;
         state.isAuthenticated = true;
         state.email = user.email;
         state.displayName = user.displayName;
         state.registeredAt = user.registeredAt;
+      })
+      .addCase(fetchMe.rejected, (state, action) => {
+        // ✅ ключевой фикс: если токен невалидный — чистим только auth, НЕ resetAll
+        state.loading = false;
+        state.isAuthenticated = false;
+        state.email = null;
+        state.displayName = null;
+        state.token = null;
+        state.registeredAt = null;
+        state.error = action.payload as string;
+
+        localStorage.removeItem(LS_TOKEN_KEY);
       });
   },
 });
