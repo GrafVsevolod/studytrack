@@ -111,7 +111,8 @@ export const tasksSlice = createSlice({
       state.items = state.items.filter((x) => !x.done);
     },
 
-    // ✅ 🔥 NEW — очищаем ВСЕ задачи (используем при register/login/logout)
+    // ✅ оставляем экшен на случай "reset данных" вручную/в будущем,
+    // но ВАЖНО: НЕ вызываем его на logout/login/register.
     clearAllTasks: (state) => {
       state.items = [];
     },

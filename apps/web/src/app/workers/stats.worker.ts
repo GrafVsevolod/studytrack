@@ -25,8 +25,13 @@ self.onmessage = (event: MessageEvent<StatsRequest>) => {
   const done = tasks.filter((t) => t.done).length;
   const active = total - done;
 
-  const doneMinutes = tasks.filter((t) => t.done).reduce((s, t) => s + (t.minutes ?? 0), 0);
-  const plannedMinutes = tasks.reduce((s, t) => s + (t.minutes ?? 0), 0);
+  // ✅ по вашей модели: plannedMinutes / actualMinutes
+  const plannedMinutes = tasks.reduce((s, t) => s + (t.plannedMinutes ?? 0), 0);
+
+  // doneMinutes = "факт" только по done-задачам
+  const doneMinutes = tasks
+    .filter((t) => t.done)
+    .reduce((s, t) => s + (t.actualMinutes ?? 0), 0);
 
   const progress = total === 0 ? 0 : clamp(Math.round((done / total) * 100), 0, 100);
 

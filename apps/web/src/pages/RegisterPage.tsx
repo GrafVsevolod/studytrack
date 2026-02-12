@@ -11,12 +11,7 @@ import {
 } from "@mui/material";
 import { useNavigate } from "react-router-dom";
 import { useAppDispatch, useAppSelector } from "../app/store/hooks";
-import {
-  clearAuthError,
-  registerUser,
-  persistSession,
-} from "../app/store/slices/authSlice";
-import { clearAllTasks } from "../app/store/slices/tasksSlice";
+import { clearAuthError, registerUser } from "../app/store/slices/authSlice";
 import { resetGoal } from "../app/store/slices/goalSlice";
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -37,12 +32,12 @@ export function RegisterPage() {
     dispatch(clearAuthError());
   }, [dispatch]);
 
-  // ✅ если регистрация прошла — сохраняем session в LS и редиректим
+  // ✅ После успешной регистрации — редирект
   useEffect(() => {
-    if (!auth.isAuthenticated) return;
-    dispatch(persistSession());
-    navigate("/today", { replace: true });
-  }, [auth.isAuthenticated, dispatch, navigate]);
+    if (auth.isAuthenticated) {
+      navigate("/today", { replace: true });
+    }
+  }, [auth.isAuthenticated, navigate]);
 
   const emailTrimmed = email.trim();
   const nameTrimmed = name.trim();
@@ -58,8 +53,7 @@ export function RegisterPage() {
     dispatch(clearAuthError());
     if (!canSubmit) return;
 
-    // ✅ новый аккаунт — чистая база задач/цели
-    dispatch(clearAllTasks());
+    // ✅ если хочешь — цель можно сбрасывать, но задачи НЕ трогаем
     dispatch(resetGoal());
 
     dispatch(
@@ -69,7 +63,7 @@ export function RegisterPage() {
         displayName: nameTrimmed,
       })
     );
-    // ❗️navigate тут НЕ делаем — дождёмся auth.isAuthenticated в useEffect выше
+    // ❗️ navigate НЕ делаем здесь — ждём auth.isAuthenticated в useEffect
   };
 
   return (
@@ -107,7 +101,9 @@ export function RegisterPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               error={touched && !emailValid}
-              helperText={touched && !emailValid ? "Введите корректный email" : " "}
+              helperText={
+                touched && !emailValid ? "Введите корректный email" : " "
+              }
             />
 
             <TextField

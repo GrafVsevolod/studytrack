@@ -1,64 +1,76 @@
-import { configureStore } from "@reduxjs/toolkit";
-import type { Middleware } from "@reduxjs/toolkit";
+import { combineReducers, configureStore, type Middleware } from "@reduxjs/toolkit";
 
-import { authReducer } from "./slices/authSlice";
+import { authReducer, resetAll } from "./slices/authSlice";
 import { tasksReducer } from "./slices/tasksSlice";
 import { goalReducer } from "./slices/goalSlice";
 import { uiReducer } from "./slices/uiSlice";
 
 import { loadState, saveState } from "../../shared/lib/storage";
-import { resetAll } from "./slices/authSlice";
 
 const PERSIST_KEY = "studytrack_state_v1";
 
-// ✅ чтобы после resetAll мы не записали обратно "пустой" стейт тем же ключом
-let skipNextPersist = false;
+/**
+ * Персистим ТОЛЬКО tasks и goal.
+ * Auth НЕ персистим — токен живёт отдельно в localStorage (studytrack_token).
+ */
 
-// ✅ middleware: при resetAll чистим persisted state + localStorage session keys
+// ✅ middleware: если кто-то диспатчит resetAll — чистим только auth keys,
+// ✅ но НЕ трогаем persisted state (tasks/goal должны жить между logout/login)
 const resetAllMiddleware: Middleware = () => (next) => (action) => {
-  if (action?.type === resetAll.type) {
-    try {
-      // чистим persisted redux state
-      localStorage.removeItem(PERSIST_KEY);
+  const type =
+    typeof action === "object" && action !== null && "type" in action
+      ? (action as { type: string }).type
+      : null;
 
-      // чистим session keys (логин/токен), чтобы роут-гард не считал что ты залогинен
+  if (type === resetAll.type) {
+    try {
       localStorage.removeItem("studytrack_token");
       localStorage.removeItem("studytrack_email");
     } catch {
       // ignore
     }
-    skipNextPersist = true;
   }
 
   return next(action);
 };
 
+const rootReducer = combineReducers({
+  auth: authReducer, // auth НЕ персистим
+  tasks: tasksReducer,
+  goal: goalReducer,
+  ui: uiReducer,
+});
+
+export type RootState = ReturnType<typeof rootReducer>;
+
+// ✅ грузим persisted (только tasks/goal)
+const persisted = (loadState(PERSIST_KEY) ?? {}) as {
+  tasks?: RootState["tasks"];
+  goal?: RootState["goal"];
+};
+
+// ✅ важный момент: НЕ задаём auth/ui в preloadedState вообще
+// (иначе можно случайно перетереть initialState редьюсеров)
+const preloadedState: Partial<RootState> = {
+  tasks: persisted.tasks,
+  goal: persisted.goal,
+};
+
 export const store = configureStore({
-  reducer: {
-    auth: authReducer,
-    tasks: tasksReducer,
-    goal: goalReducer,
-    ui: uiReducer,
-  },
-  preloadedState: loadState(PERSIST_KEY),
+  reducer: rootReducer,
+  preloadedState,
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
-      serializableCheck: false, // ✅ localStorage/Date/и т.п. — чтобы не ловить лишние варнинги
+      serializableCheck: false,
     }).concat(resetAllMiddleware),
 });
 
+// ✅ сохраняем только то, что должно жить между logout/login
 store.subscribe(() => {
-  if (skipNextPersist) {
-    skipNextPersist = false;
-    return;
-  }
-
   saveState(PERSIST_KEY, {
-    auth: store.getState().auth,
     tasks: store.getState().tasks,
     goal: store.getState().goal,
   });
 });
 
-export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
